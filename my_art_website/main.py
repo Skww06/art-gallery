@@ -2,43 +2,38 @@ import os
 import secrets
 import shutil
 import stripe
-from fastapi import FastAPI, Depends, Request, Form, File, UploadFile, status, HTTPException
+from fastapi import FastAPI, Depends, Request, Form, File, UploadFile, status, HTTPException, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from sqlalchemy.orm import Session
 
 from database import SessionLocal, Painting
 
 app = FastAPI(title="Original Art Gallery")
 
-# Mount static folder & setup Jinja2 templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 IMAGE_DIR = "static/images"
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
-# Basic Auth Setup
-security = HTTPBasic()
+# Admin Credentials
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "supersecretpassword"
 
 # Stripe API Setup
-# Replace with your actual secret key from dashboard.stripe.com when ready for live payments
-stripe.api_key = "sk_test_51U5co2KPLf2b02uzXrHyd4zN8EED2SHTuhqWPIPxighnj64T2gR3Pn0wehNlxgWUEL9TmzPs9bCJvKDuZQYwZWT100lBlff3jI" 
+stripe.api_key = "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" 
 
-def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
-    is_user_correct = secrets.compare_digest(credentials.username, ADMIN_USERNAME)
-    is_pass_correct = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
-    if not (is_user_correct and is_pass_correct):
+def verify_admin(request: Request):
+    """Checks if the user has a valid admin session cookie."""
+    session_token = request.cookies.get("admin_session")
+    if session_token != "authenticated_active":
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect admin credentials",
-            headers={"WWW-Authenticate": "Basic"},
+            status_code=status.HTTP_303_SEE_OTHER,
+            headers={"Location": "/login"}
         )
-    return credentials.username
+    return ADMIN_USERNAME
 
 def get_db():
     db = SessionLocal()
@@ -48,14 +43,44 @@ def get_db():
         db.close()
 
 # ----------------
+# AUTHENTICATION ROUTES
+# ----------------
+
+@app.get("/login")
+def login_page(request: Request):
+    return templates.TemplateResponse(request=request, name="login.html", context={"error": None})
+
+@app.post("/login")
+def login_submit(request: Request, username: str = Form(...), password: str = Form(...)):
+    is_user_correct = secrets.compare_digest(username, ADMIN_USERNAME)
+    is_pass_correct = secrets.compare_digest(password, ADMIN_PASSWORD)
+    
+    if not (is_user_correct and is_pass_correct):
+        return templates.TemplateResponse(
+            request=request, 
+            name="login.html", 
+            context={"error": "Invalid username or password."},
+            status_code=401
+        )
+    
+    # Set a secure session cookie upon successful login
+    response = RedirectResponse(url="/admin", status_code=303)
+    response.set_cookie(key="admin_session", value="authenticated_active", httponly=True)
+    return response
+
+@app.get("/logout")
+def logout():
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie(key="admin_session")
+    return response
+
+# ----------------
 # PUBLIC CUSTOMER ROUTES
 # ----------------
 
 @app.get("/")
 async def home(request: Request, db: Session = Depends(get_db)):
-    # Grab ALL paintings, including sold ones
     paintings = db.query(Painting).all()
-    
     return templates.TemplateResponse(
         request=request,
         name="index.html", 
@@ -73,6 +98,9 @@ def create_checkout_session(painting_id: int, request: Request, db: Session = De
     
     checkout_session = stripe.checkout.Session.create(
         payment_method_types=["card"],
+        shipping_address_collection={
+            "allowed_countries": ["US", "CA", "GB", "AU", "FR", "DE"],
+        },
         line_items=[{
             "price_data": {
                 "currency": "usd", 
@@ -88,60 +116,10 @@ def create_checkout_session(painting_id: int, request: Request, db: Session = De
     
     return RedirectResponse(url=checkout_session.url, status_code=303)
 
-@app.post("/add")
-async def create_painting(
-    title: str = Form(...),
-    medium: str = Form(...),
-    dimensions: str = Form(...),
-    price_dollars: float = Form(...),
-    description: str = Form(""),
-    image_file: UploadFile = File(...),
-    extra_images: list[UploadFile] = File(None),  # <-- Accept multiple optional files
-    db: Session = Depends(get_db),
-    admin: str = Depends(verify_admin)
-):
-    """Protected upload handler for main image and optional extra gallery shots."""
-    # Save main thumbnail image
-    main_filename = image_file.filename
-    main_path = os.path.join(IMAGE_DIR, main_filename)
-    with open(main_path, "wb") as buffer:
-        shutil.copyfileobj(image_file.file, buffer)
-
-    # Save extra detailed images
-    saved_extra_filenames = []
-    if extra_images:
-        for img in extra_images:
-            if img.filename:
-                extra_path = os.path.join(IMAGE_DIR, img.filename)
-                with open(extra_path, "wb") as buffer:
-                    shutil.copyfileobj(img.file, buffer)
-                saved_extra_filenames.append(img.filename)
-
-    price_cents = int(price_dollars * 100)
-    extra_images_str = ",".join(saved_extra_filenames) if saved_extra_filenames else ""
-
-    new_painting = Painting(
-        title=title,
-        medium=medium,
-        dimensions=dimensions,
-        price_cents=price_cents,
-        image_filename=main_filename,
-        extra_images=extra_images_str,  # <-- Save comma-separated list
-        description=description,
-        is_available=True
-    )
-
-    db.add(new_painting)
-    db.commit()
-
-    return RedirectResponse(url="/admin", status_code=303)
-
 @app.get("/success")
 def payment_success(request: Request, painting_id: int, db: Session = Depends(get_db)):
-    """Page displayed after successful Stripe payment."""
     painting = db.query(Painting).filter(Painting.id == painting_id).first()
     if painting:
-        # Mark painting as sold upon successful checkout
         painting.is_available = False
         db.commit()
     return templates.TemplateResponse(
@@ -185,17 +163,14 @@ async def create_painting(
     dimensions: str = Form(...),
     price_dollars: float = Form(...),
     description: str = Form(""),
-    photos: list[UploadFile] = File(...),  # <-- Receives all selected photos at once
+    photos: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
     admin: str = Depends(verify_admin)
 ):
-    """Protected upload handler that automatically assigns the first photo as thumbnail and the rest as extras."""
     if not photos or not photos[0].filename:
         return RedirectResponse(url="/admin", status_code=303)
 
     saved_filenames = []
-    
-    # Save all uploaded photos to static/images/
     for img in photos:
         if img.filename:
             file_path = os.path.join(IMAGE_DIR, img.filename)
@@ -203,13 +178,9 @@ async def create_painting(
                 shutil.copyfileobj(img.file, buffer)
             saved_filenames.append(img.filename)
 
-    # First image is the main thumbnail
     main_filename = saved_filenames[0]
-    
-    # Any remaining images become extra gallery slider shots
     extra_filenames = saved_filenames[1:]
     extra_images_str = ",".join(extra_filenames) if extra_filenames else ""
-
     price_cents = int(price_dollars * 100)
 
     new_painting = Painting(

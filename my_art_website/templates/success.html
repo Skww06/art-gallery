@@ -3,20 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thank You for Your Purchase!</title>
+    <title>Thank You for Your Purchase — Art Studio Gallery</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, .font-serif-editorial { font-family: 'Cormorant Garamond', serif; }
+    </style>
 </head>
-<body class="bg-stone-50 text-stone-900 font-sans min-h-screen flex items-center justify-center p-6">
+<body class="bg-stone-50 text-stone-900 min-h-screen flex items-center justify-center p-6 selection:bg-stone-200">
 
-    <div class="bg-white p-8 rounded-lg shadow-sm border border-stone-200 max-w-md w-full text-center">
-        <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
-            ✓
+    <div class="bg-white p-10 shadow-sm border border-stone-200 max-w-lg w-full text-center">
+        <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 text-xl border border-emerald-100">
+            &#10003;
         </div>
-        <h1 class="text-2xl font-light text-stone-800 mb-2">Thank You!</h1>
-        <p class="text-stone-600 text-sm mb-6">Your order for <strong class="text-stone-900">{{ painting.title }}</strong> has been confirmed. The studio will prepare your original artwork for shipment soon.</p>
         
-        <a href="/" class="inline-block bg-stone-900 text-white px-6 py-2.5 rounded text-sm font-medium hover:bg-stone-700 transition">
-            Return to Gallery
+        <p class="text-xs uppercase tracking-widest text-stone-400 font-medium mb-2">Order Confirmed</p>
+        <h1 class="font-serif-editorial text-4xl text-stone-900 mb-4">Thank You</h1>
+        
+        {% if painting %}
+        <p class="text-stone-600 text-sm font-light leading-relaxed mb-8">
+            Your acquisition of <strong class="text-stone-900 font-medium font-serif-editorial text-lg">"{{ painting.title }}"</strong> has been successfully processed. The studio will securely package and prepare your original work for express delivery.
+        </p>
+        {% else %}
+        <p class="text-stone-600 text-sm font-light leading-relaxed mb-8">
+            Your payment has been processed successfully. The studio will prepare your artwork for delivery shortly.
+        </p>
+        {% endif %}
+        
+        <a href="/" class="inline-block bg-stone-900 text-white px-8 py-3.5 text-xs tracking-widest uppercase font-medium hover:bg-stone-800 transition">
+            Return to Gallery &rarr;
         </a>
     </div>
 

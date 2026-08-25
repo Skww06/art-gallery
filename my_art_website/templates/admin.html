@@ -44,6 +44,9 @@
             <a href="/" class="text-stone-500 hover:text-stone-900 transition flex items-center uppercase tracking-widest text-xs font-medium border border-stone-200 px-4 py-2 hover:border-stone-400">
                 &larr; View Live Gallery
             </a>
+            <a href="/logout" class="text-xs uppercase tracking-widest text-stone-400 hover:text-red-600 transition font-medium">
+                Logout
+            </a>
         </div>
     </header>
 
@@ -87,21 +90,6 @@
                             <input type="file" name="photos" multiple required accept="image/*" class="w-full text-sm text-stone-500 cursor-pointer focus:outline-none">
                         </div>
                         <p class="text-[10px] text-stone-400 mt-1">Hold Cmd/Ctrl to select multiple photos. The first selected will be the main thumbnail.</p>
-                    </div>
-                        <div>
-                            <label class="block text-xs uppercase tracking-wider text-stone-500 font-medium mb-1.5">Main Artwork Image</label>
-                            <div class="bg-stone-50 border border-stone-200 p-1 rounded-none">
-                                <input type="file" name="image_file" required accept="image/*" class="w-full text-sm text-stone-500 cursor-pointer focus:outline-none">
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs uppercase tracking-wider text-stone-500 font-medium mb-1.5">Additional Detail Shots (Optional)</label>
-                            <div class="bg-stone-50 border border-stone-200 p-1 rounded-none">
-                                <input type="file" name="extra_images" multiple accept="image/*" class="w-full text-sm text-stone-500 cursor-pointer focus:outline-none">
-                            </div>
-                            <p class="text-[10px] text-stone-400 mt-1">Hold Cmd/Ctrl to select multiple detail photos.</p>
-                        </div>
                     </div>
 
                     <button type="submit" class="w-full bg-stone-900 text-white py-3.5 mt-2 text-xs tracking-widest uppercase font-medium hover:bg-stone-800 transition shadow-sm">
@@ -155,10 +143,17 @@
                                     </span>
                                 {% endif %}
                             </td>
-                            <td class="p-5 text-right whitespace-nowrap">
-                                <!-- Placeholder links for future administrative actions -->
-                                <button class="text-[10px] uppercase tracking-widest text-stone-400 hover:text-stone-900 transition mr-3">Edit</button>
-                                <button class="text-[10px] uppercase tracking-widest text-red-400 hover:text-red-600 transition">Delete</button>
+                            <td class="p-5 text-right whitespace-nowrap space-x-3">
+                                <!-- Toggle Status Button -->
+                                <form action="/admin/toggle/{{ painting.id }}" method="POST" class="inline">
+                                    <button type="submit" class="text-[10px] uppercase tracking-widest text-stone-500 hover:text-stone-900 transition">
+                                        {{ 'Mark Sold' if painting.is_available else 'Mark Available' }}
+                                    </button>
+                                </form>
+                                <!-- Delete Button -->
+                                <form action="/admin/delete/{{ painting.id }}" method="POST" class="inline" onsubmit="return confirm('Permanently delete this artwork?');">
+                                    <button type="submit" class="text-[10px] uppercase tracking-widest text-red-400 hover:text-red-600 transition">Delete</button>
+                                </form>
                             </td>
                         </tr>
                         {% else %}
