@@ -20,7 +20,7 @@ os.makedirs(IMAGE_DIR, exist_ok=True)
 
 # Admin Credentials
 ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "supersecretpassword"
+ADMIN_PASSWORD = "Sr19960412!"
 
 # Stripe API Setup
 stripe.api_key = "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" 
