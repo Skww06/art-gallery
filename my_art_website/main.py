@@ -62,6 +62,32 @@ async def home(request: Request, db: Session = Depends(get_db)):
         context={"request": request, "paintings": paintings}
     )
 
+@app.post("/create-checkout-session/{painting_id}")
+def create_checkout_session(painting_id: int, request: Request, db: Session = Depends(get_db)):
+    painting = db.query(Painting).filter(Painting.id == painting_id, Painting.is_available == True).first()
+    
+    if not painting:
+        raise HTTPException(status_code=404, detail="Painting not found or sold")
+        
+    base_url = str(request.base_url).rstrip("/")
+    
+    checkout_session = stripe.checkout.Session.create(
+        payment_method_types=["card"],
+        line_items=[{
+            "price_data": {
+                "currency": "usd", 
+                "product_data": {"name": painting.title}, 
+                "unit_amount": painting.price_cents
+            }, 
+            "quantity": 1
+        }],
+        mode="payment",
+        success_url=f"{base_url}/success?painting_id={painting.id}",
+        cancel_url=f"{base_url}/",
+    )
+    
+    return RedirectResponse(url=checkout_session.url, status_code=303)
+
 @app.post("/add")
 async def create_painting(
     title: str = Form(...),
