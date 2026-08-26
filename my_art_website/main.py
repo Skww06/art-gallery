@@ -2,6 +2,7 @@ import os
 import secrets
 import shutil
 import stripe
+import uuid
 from fastapi import FastAPI, Depends, Request, Form, File, UploadFile, status, HTTPException, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -171,12 +172,17 @@ async def create_painting(
         return RedirectResponse(url="/admin", status_code=303)
 
     saved_filenames = []
+    
     for img in photos:
         if img.filename:
-            file_path = os.path.join(IMAGE_DIR, img.filename)
+            # Generate a unique secure filename to prevent collisions and overwrites
+            ext = img.filename.split(".")[-1]
+            unique_filename = f"{uuid.uuid4()}.{ext}"
+            
+            file_path = os.path.join(IMAGE_DIR, unique_filename)
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(img.file, buffer)
-            saved_filenames.append(img.filename)
+            saved_filenames.append(unique_filename)
 
     main_filename = saved_filenames[0]
     extra_filenames = saved_filenames[1:]
