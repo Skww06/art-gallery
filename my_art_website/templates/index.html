@@ -203,12 +203,12 @@
             document.getElementById('modalPrice').innerText = '$' + (priceCents / 100).toFixed(2);
             
             // Build array of all images for this painting
-            currentImageGallery = ['/static/images/' + mainImage];
+            currentImageGallery = [mainImage];
             if (extraImagesStr && extraImagesStr.trim() !== '') {
                 const extras = extraImagesStr.split(',');
                 extras.forEach(img => {
                     if(img.trim() !== '') {
-                        currentImageGallery.push('/static/images/' + img.trim());
+                        currentImageGallery.push(img.trim());
                     }
                 });
             }
