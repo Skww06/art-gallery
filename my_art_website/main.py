@@ -1,3 +1,12 @@
+import cloudinary
+import cloudinary.uploader
+
+# Configure Cloudinary with your credentials from Step 1
+cloudinary.config(
+    cloud_name="your_cloud_name_here",
+    api_key="your_api_key_here",
+    api_secret="your_api_secret_here"
+)
 import os
 import secrets
 import shutil
@@ -171,22 +180,18 @@ async def create_painting(
     if not photos or not photos[0].filename:
         return RedirectResponse(url="/admin", status_code=303)
 
-    saved_filenames = []
+    saved_image_urls = []
     
     for img in photos:
         if img.filename:
-            # Generate a unique secure filename to prevent collisions and overwrites
-            ext = img.filename.split(".")[-1]
-            unique_filename = f"{uuid.uuid4()}.{ext}"
-            
-            file_path = os.path.join(IMAGE_DIR, unique_filename)
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(img.file, buffer)
-            saved_filenames.append(unique_filename)
+            # Upload directly to Cloudinary cloud storage
+            upload_result = cloudinary.uploader.upload(img.file)
+            secure_url = upload_result.get("secure_url")
+            saved_image_urls.append(secure_url)
 
-    main_filename = saved_filenames[0]
-    extra_filenames = saved_filenames[1:]
-    extra_images_str = ",".join(extra_filenames) if extra_filenames else ""
+    main_url = saved_image_urls[0]
+    extra_urls = saved_image_urls[1:]
+    extra_images_str = ",".join(extra_urls) if extra_urls else ""
     price_cents = int(price_dollars * 100)
 
     new_painting = Painting(
@@ -194,8 +199,8 @@ async def create_painting(
         medium=medium,
         dimensions=dimensions,
         price_cents=price_cents,
-        image_filename=main_filename,
-        extra_images=extra_images_str,
+        image_filename=main_url,         # Stores the full Cloudinary URL
+        extra_images=extra_images_str,   # Stores comma-separated Cloudinary URLs
         description=description,
         is_available=True
     )
