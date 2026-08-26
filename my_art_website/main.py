@@ -184,10 +184,15 @@ async def create_painting(
     
     for img in photos:
         if img.filename:
-            # Upload directly to Cloudinary cloud storage
+            # Upload directly to Cloudinary
             upload_result = cloudinary.uploader.upload(img.file)
             secure_url = upload_result.get("secure_url")
-            saved_image_urls.append(secure_url)
+            
+            # --- ADD THIS LINE ---
+            # Injects auto-formatting and auto-quality into the URL
+            optimized_url = secure_url.replace("/upload/", "/upload/f_auto,q_auto/")
+            
+            saved_image_urls.append(optimized_url)
 
     main_url = saved_image_urls[0]
     extra_urls = saved_image_urls[1:]
