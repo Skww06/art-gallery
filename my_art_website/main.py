@@ -3,9 +3,9 @@ import cloudinary.uploader
 
 # Configure Cloudinary with your credentials from Step 1
 cloudinary.config(
-    cloud_name="your_cloud_name_here",
-    api_key="your_api_key_here",
-    api_secret="your_api_secret_here"
+    cloud_name="fmfa7fnu",
+    api_key="745416594658843",
+    api_secret="eAFyr2QqIefn-zfIeHjjPbX32Ls"
 )
 import os
 import secrets
